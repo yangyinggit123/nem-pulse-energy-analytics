@@ -2,7 +2,11 @@
 
 A beginner-friendly Python workflow for comparing wholesale electricity prices and regional demand in Tasmania (TAS1) and Victoria (VIC1), using uploaded AEMO CSV files for October 2026.
 
-**Website status:** The existing `prototype/index.html` still uses simulated data. This release adds an offline analysis workflow; it does not connect the website to real data. The existing website is not included in this package.
+**Website status:** The dashboard reads the uploaded October 2026 CSV files from `data/raw/` and calculates historical price, demand and spread metrics in the browser. It is not a live data feed. The uploaded files have not been independently compared with the latest official online versions.
+
+[Open the dashboard](https://yangyinggit123.github.io/nem-pulse-energy-analytics/prototype/)
+
+Select **Tasmania**, **Victoria** or **Compare both** to explore the two regions. Summary cards use five-minute observations; charts show daily averages. The spread chart always shows TAS1 minus VIC1.
 
 ## October 2026 results
 
@@ -20,7 +24,7 @@ The mean simultaneous price spread (TAS1 minus VIC1) was **+8.65 AUD/MWh**. TAS1
 
 ## Project structure
 
-Copy the package contents into your existing `nem-pulse-energy-analytics` repository. Preserve the existing `prototype/` directory. If the repository already has a README, merge the relevant sections before replacing it.
+The repository separates raw inputs, reproducible Python analysis, derived results and the browser dashboard:
 
 ```text
 nem-pulse-energy-analytics/
@@ -43,7 +47,8 @@ nem-pulse-energy-analytics/
 │   ├── analysis_zh.md
 │   └── figures/tas_vs_vic_oct2026.png
 └── prototype/
-    └── index.html  # Existing simulated-data website; not included here
+    ├── index.html  # Historical dashboard
+    └── app.js      # CSV loading, validation, metrics and charts
 ```
 
 `analysis_zh.md` contains the detailed analysis in Chinese. This README provides an English project overview and setup guide.
@@ -140,9 +145,24 @@ A single month's results should not be generalized to annual prices, future pric
 
 Running the script regenerates the CSV files and chart, but does not update written statistics in this README or `reports/analysis_zh.md`. Recheck the written results whenever inputs change. The verified runtime versions are recorded in that report.
 
+## What this version demonstrates
+
+- A reproducible Python workflow for cleaning, validating and aligning regional time series.
+- Descriptive analysis of prices, negative-price intervals, demand and regional spreads.
+- A static dashboard that loads the historical CSV files and calculates metrics in the browser.
+- Clear distinctions between historical and live data, wholesale and retail prices, and descriptive findings and causal explanations.
+
+## Dashboard setup
+
+The dashboard requires `prototype/index.html`, `prototype/app.js` and the two CSV files under `data/raw/`. Publish the repository root through GitHub Pages and open `/prototype/`. Opening the HTML directly from disk may prevent CSV loading because of browser security restrictions.
+
+The page displays a loading error if input files are unavailable or fail validation; it does not fall back to simulated data. The Python workflow separately produces the processed CSVs and PNG chart. The dashboard reads raw CSVs, not the processed files.
+
 ## Next steps
 
-1. Add the offline analysis files and chart to the existing GitHub repository.
-2. Keep the website clearly labelled as using simulated data.
-3. Connect the website to processed data in a future release, displaying the source, month, units and update date.
-4. Check that website values match the processed CSV files before describing the website as using real data.
+1. Run the Python workflow locally and reproduce the supplied outputs.
+2. Add a configurable month and date-range selection, with matching coverage checks.
+3. Extend the analysis to additional months before discussing longer-term patterns.
+4. Add generation, interconnector and weather data for further research into price differences.
+
+Automated downloads, live monitoring and forecasting are not implemented in this version.
