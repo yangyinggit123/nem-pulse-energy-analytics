@@ -1,0 +1,46 @@
+{
+  "TAS1": {
+    "rows": 8928,
+    "first": "2026-10-01 00:05:00",
+    "last": "2026-11-01 00:00:00",
+    "missing_intervals": 0,
+    "outside_intervals": 0,
+    "columns": [
+      "REGION",
+      "SETTLEMENTDATE",
+      "TOTALDEMAND",
+      "RRP",
+      "PERIODTYPE"
+    ],
+    "sha256": "53eef756f06cb9fa8f4a6c3d0e97af47a3f5815e4c8efa52ee11b1b0e01376d8"
+  },
+  "VIC1": {
+    "rows": 8928,
+    "first": "2026-10-01 00:05:00",
+    "last": "2026-11-01 00:00:00",
+    "missing_intervals": 0,
+    "outside_intervals": 0,
+    "columns": [
+      "REGION",
+      "SETTLEMENTDATE",
+      "TOTALDEMAND",
+      "RRP",
+      "PERIODTYPE"
+    ],
+    "sha256": "fa828a51e42617e351ef8a4f5319135d73456c1183fc9ca82d8eb8b443b2f1e3"
+  },
+  "alignment": {
+    "both": 8928,
+    "left_only": 0,
+    "right_only": 0
+  },
+  "spread": {
+    "paired_intervals": 8928,
+    "mean": 8.649528449820789,
+    "median": 0.5899999999999999,
+    "min": -239.31,
+    "max": 350.05,
+    "tas_higher_pct": 57.34767025089605,
+    "equal_pct": 1.8369175627240144
+  }
+}
