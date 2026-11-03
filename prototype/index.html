@@ -17,4 +17,34 @@
 <section class="panel"><h2>Daily price spread</h2><p class="caption">TAS1 − VIC1 · AUD/MWh · above zero means TAS1 is more expensive</p><svg class="chart" id="spreadChart" role="img" aria-label="Daily mean TAS1 minus VIC1 price spread, October 2026"></svg></section></div>
 <section class="panel" style="margin-top:16px"><h2>Intraday patterns</h2><p class="caption">October observations grouped by hour starting · NEM time (AEST, UTC+10), not local daylight saving time. Each hour contains 372 five-minute observations per region. These are historical distributions, not forecasts.</p><div class="legend"><span><i class="dot" style="background:var(--teal)"></i>TAS1</span><span><i class="dot" style="background:var(--blue)"></i>VIC1</span></div><h3>Mean wholesale price · AUD/MWh</h3><svg class="chart" id="hourPrice" role="img" aria-label="Mean wholesale price by hour starting"></svg><h3>Price dispersion · sample standard deviation, AUD/MWh</h3><p class="caption">Dispersion across all observations in that hour during October; not consecutive price changes or a prediction interval.</p><svg class="chart" id="hourStd" role="img" aria-label="Price standard deviation by hour starting"></svg><h3>Mean regional demand · MW</h3><svg class="chart" id="hourDemand" role="img" aria-label="Mean regional demand by hour starting"></svg><p class="caption">Horizontal axis: hour starting, 00–23. For example, 12 means 12:00–13:00. Region buttons above also control these charts.</p></section>
 <section class="panel" style="margin-top:16px"><h2>Source and method</h2><p>Source: user-uploaded <a style="color:var(--teal)" href="https://aemo.com.au/energy-systems/electricity/national-electricity-market-nem/data-nem/aggregated-data">AEMO aggregated price and demand CSVs</a>. File provenance has not been independently checked against the latest online versions.</p><p><a style="color:var(--teal)" href="../data/raw/PRICE_AND_DEMAND_202610_TAS1.csv">Download TAS1 CSV</a> · <a style="color:var(--teal)" href="../data/raw/PRICE_AND_DEMAND_202610_VIC1.csv">Download VIC1 CSV</a></p><p>Interval-ending timestamps use the source NEM clock (AEST, UTC+10). For daily grouping, subtract five minutes before assigning a date. Negative prices are retained. Daily means use 288 observations. Spread is always TAS1 minus VIC1.</p><p>These descriptive results do not establish causes. Generation mix, network constraints, flows, weather and bidding require additional analysis. Historical wholesale prices do not predict future prices or household bills.</p></section>
-<div class="foot">NEM Pulse V0.2 · October 2026 historical dataset · No simulated fallback, live monitoring or forecasting. Website values are calculated from the linked CSV files when this page loads.</div></main><script src="app.js?v=intraday-20261104"></script><script src="annual.js?v=monthfilter1"></script></body></html>
+<div class="foot">NEM Pulse V0.2 · October 2026 historical dataset · No simulated fallback, live monitoring or forecasting. Website values are calculated from the linked CSV files when this page loads.</div></main><script src="app.js?v=intraday-20261104"></script><script src="annual.js?v=monthfilter1"></script>
+<style>
+#chartTooltip{position:fixed;z-index:1000;max-width:min(340px,calc(100vw - 24px));padding:12px 16px;background:#f3f8ff;color:#102038;border:1px solid #55b7ff;border-radius:9px;box-shadow:0 6px 24px #0008;pointer-events:none;font-size:14px;line-height:1.6;white-space:pre-line}
+svg.chart circle{cursor:crosshair}
+</style>
+<div id="chartTooltip" role="status" hidden></div>
+<script>
+(()=>{
+ const tip=document.getElementById('chartTooltip');
+ let active=null;
+ function hide(){tip.hidden=true;active=null;}
+ function show(point,x,y){
+  const title=point.querySelector('title');if(!title)return;
+  active=point;tip.textContent=title.textContent.replaceAll(' | ','\n');tip.hidden=false;
+  const rect=tip.getBoundingClientRect();
+  tip.style.left=Math.max(12,Math.min(x+14,window.innerWidth-rect.width-12))+'px';
+  tip.style.top=Math.max(12,Math.min(y+14,window.innerHeight-rect.height-12))+'px';
+ }
+ function find(target){return target instanceof Element?target.closest('svg.chart circle'):null;}
+ document.addEventListener('pointerover',e=>{const p=find(e.target);if(p)show(p,e.clientX,e.clientY);});
+ document.addEventListener('pointermove',e=>{const p=find(e.target);if(p)show(p,e.clientX,e.clientY);});
+ document.addEventListener('pointerout',e=>{if(find(e.target)&&e.pointerType!=='touch')hide();});
+ document.addEventListener('click',e=>{const p=find(e.target);if(p)show(p,e.clientX,e.clientY);else hide();});
+ document.addEventListener('focusin',e=>{const p=find(e.target);if(p){const r=p.getBoundingClientRect();show(p,r.x+r.width/2,r.y+r.height/2);}});
+ document.addEventListener('focusout',e=>{if(find(e.target))hide();});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});
+ document.addEventListener('change',hide);window.addEventListener('scroll',hide,true);window.addEventListener('resize',hide);
+ function prepare(){document.querySelectorAll('svg.chart circle').forEach(p=>{const title=p.querySelector('title');if(!title)return;p.setAttribute('tabindex','0');p.setAttribute('role','button');p.setAttribute('aria-label',title.textContent);p.setAttribute('r','8');});if(active&&!active.isConnected)hide();}
+ new MutationObserver(prepare).observe(document.querySelector('main'),{childList:true,subtree:true});prepare();
+})();
+</script></body></html>
