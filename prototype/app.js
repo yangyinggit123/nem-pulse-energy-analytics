@@ -26,13 +26,13 @@ function parseCSV(text,region){
  return rows;
 }
 function daily(rows){const groups=new Map();for(const r of rows){const date=new Date(r.t-STEP).toISOString().slice(0,10);if(!groups.has(date))groups.set(date,[]);groups.get(date).push(r);}return [...groups].map(([date,a])=>({date,price:mean(a.map(r=>r.price)),demand:mean(a.map(r=>r.demand))}));}
-function chart(id,series,dates){
+function chart(id,series,dates,hourlyAxis=false){
  const svg=document.getElementById(id),w=650,h=280,l=65,r=20,t=15,b=40;
  const values=series.flatMap(s=>s.values);let low=Math.min(0,...values),high=Math.max(0,...values),pad=(high-low||1)*.08;low-=pad;high+=pad;
  const X=i=>l+i*(w-l-r)/(dates.length-1),Y=v=>t+(high-v)*(h-t-b)/(high-low);
  let out='';for(let i=0;i<=4;i++){const v=low+(high-low)*i/4;out+=`<line x1="${l}" y1="${Y(v)}" x2="${w-r}" y2="${Y(v)}" stroke="#293b51"/><text x="${l-8}" y="${Y(v)+4}" fill="#9cb0ca" font-size="11" text-anchor="end">${Math.round(v).toLocaleString('en-AU')}</text>`;}
  out+=`<line x1="${l}" y1="${Y(0)}" x2="${w-r}" y2="${Y(0)}" stroke="#9cb0ca"/>`;
- for(let i=0;i<dates.length;i+=5)out+=`<text x="${X(i)}" y="${h-12}" fill="#9cb0ca" font-size="11" text-anchor="middle">Oct ${Number(dates[i].slice(-2))}</text>`;
+ for(let i=0;i<dates.length;i+=(hourlyAxis?2:5))out+=`<text x="${X(i)}" y="${h-12}" fill="#9cb0ca" font-size="11" text-anchor="middle">${hourlyAxis?String(i).padStart(2,'0'):'Oct '+Number(dates[i].slice(-2))}</text>`;
  for(const s of series){out+=`<polyline fill="none" stroke="${s.color}" stroke-width="3" points="${s.values.map((v,i)=>`${X(i)},${Y(v)}`).join(' ')}"/>`;s.values.forEach((v,i)=>{out+=`<circle cx="${X(i)}" cy="${Y(v)}" r="6" fill="${s.color}" fill-opacity=".1"><title>${s.name} | ${dates[i]} | ${money(v)} ${s.unit}</title></circle>`;});}
  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);svg.innerHTML=out;
 }
@@ -48,6 +48,7 @@ function render(){
  for(const [id,field,unit] of [['priceChart','price','AUD/MWh'],['demandChart','demand','MW']])chart(id,selected.map(key=>({name:key,values:ds[key].map(x=>x[field]),color:key==='TAS1'?'#46dbc3':'#55b7ff',unit})),dates);
  const ta=daily(datasets.TAS1),vi=daily(datasets.VIC1);
  chart('spreadChart',[{name:'TAS1 − VIC1',values:ta.map((x,i)=>x.price-vi[i].price),color:'#ffbc69',unit:'AUD/MWh'}],dates);
+ renderIntraday(selected);
  const spreads=datasets.TAS1.map((x,i)=>x.price-datasets.VIC1[i].price);
  const neg=key=>100*datasets[key].filter(x=>x.price<0).length/8928;
  document.getElementById('alerts').innerHTML=`<div class="alert"><strong>Mean TAS1 − VIC1 spread</strong>${money(mean(spreads))} AUD/MWh. TAS1 is higher in ${(100*spreads.filter(v=>v>0).length/8928).toFixed(2)}% of intervals.</div><div class="alert"><strong>Negative-price intervals</strong>TAS1: ${neg('TAS1').toFixed(2)}% · VIC1: ${neg('VIC1').toFixed(2)}%.</div><div class="alert"><strong>Complete paired coverage</strong>8,928 five-minute intervals per region · 31 days. Spread and observations always compare both regions.</div>`;
@@ -63,3 +64,16 @@ async function load(){
 }
 document.querySelectorAll('[data-region]').forEach(b=>b.onclick=()=>{region=b.dataset.region;document.querySelectorAll('[data-region]').forEach(x=>x.classList.toggle('active',x===b));render();});
 load();
+
+function hourlySummary(rows){
+ const groups=Array.from({length:24},()=>[]);
+ for(const row of rows)groups[new Date(row.t-STEP).getUTCHours()].push(row);
+ return groups.map((a,hour)=>({hour,count:a.length,price:mean(a.map(r=>r.price)),std:sd(a.map(r=>r.price)),demand:mean(a.map(r=>r.demand))}));
+}
+function renderIntraday(selected){
+ const summaries=Object.fromEntries(selected.map(key=>[key,hourlySummary(datasets[key])]));
+ const labels=Array.from({length:24},(_,i)=>String(i).padStart(2,'0')+':00–'+String(i+1).padStart(2,'0')+':00 AEST');
+ for(const [id,field,unit] of [['hourPrice','price','AUD/MWh'],['hourStd','std','AUD/MWh'],['hourDemand','demand','MW']]){
+  chart(id,selected.map(key=>({name:key,values:summaries[key].map(r=>r[field]),color:key==='TAS1'?'#46dbc3':'#55b7ff',unit})),labels,true);
+ }
+}
