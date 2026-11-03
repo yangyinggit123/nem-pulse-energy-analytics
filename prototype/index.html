@@ -47,4 +47,106 @@ svg.chart circle{cursor:crosshair}
  function prepare(){document.querySelectorAll('svg.chart circle').forEach(p=>{const title=p.querySelector('title');if(!title)return;p.setAttribute('tabindex','0');p.setAttribute('role','button');p.setAttribute('aria-label',title.textContent);p.setAttribute('r','8');});if(active&&!active.isConnected)hide();}
  new MutationObserver(prepare).observe(document.querySelector('main'),{childList:true,subtree:true});prepare();
 })();
+</script><script>
+(()=>{
+ const translations={
+ 'Wholesale market overview':'批发电力市场概览',
+ 'V0.3 · HISTORICAL DATA & SQL':'V0.3 · 历史数据与 SQL 分析',
+ 'NOVEMBER 2025–OCTOBER 2026 · TASMANIA & VICTORIA':'2025年11月—2026年10月 · 塔州与维州',
+ 'V0.3 · SQL ANALYSIS · NOV 2025–OCT 2026':'V0.3 · SQL 分析 · 2025年11月—2026年10月',
+ '12-month market & price-risk overview':'12个月市场与电价风险概览',
+ 'Historical analysis of AEMO price and demand files for energy market and procurement-risk research. Prices are wholesale AUD/MWh, not household tariffs. No live feed is connected.':'基于 AEMO 电价与需求文件开展历史市场和采购风险分析。价格单位为澳元/兆瓦时，属于批发价，不是居民零售电价。当前未接入实时数据。',
+ 'SQL summaries of 210,240 five-minute records. High price means RRP > 300 AUD/MWh, an illustrative threshold, not an official risk standard. Historical observations, not forecasts or actual retailer losses.':'使用 SQL 汇总 210,240 条五分钟记录。高价暂定义为 RRP > 300 澳元/兆瓦时，仅用于分析，不是官方风险标准。这里展示历史观察，不是预测或零售商实际亏损。',
+ 'Compare both':'两州对比','Tasmania':'塔州','Victoria':'维州','Hourly analysis period:':'小时分析范围：','Full year':'全年',
+ 'Month selection updates the cards and three hourly charts. The two monthly trend charts always show all 12 months for context.':'月份选择会更新统计卡片和三个小时图。两张月度趋势图始终保留12个月，方便比较。',
+ 'Monthly mean wholesale price · AUD/MWh':'月度平均批发电价 · 澳元/兆瓦时',
+ 'Monthly peak five-minute price · AUD/MWh':'月度最高五分钟电价 · 澳元/兆瓦时',
+ 'Peak prices show extremes, not typical prices or event duration.':'最高价反映极端价格，不代表常见价格或事件持续时间。',
+ 'Mean wholesale price by hour · AUD/MWh':'各小时平均批发电价 · 澳元/兆瓦时',
+ 'Mean regional demand by hour · MW':'各小时平均区域需求 · 兆瓦',
+ 'High-price frequency by hour · %':'各小时高价区间占比 · %',
+ 'High-price intervals / selected-period time share':'高价区间数 / 所选期间时间占比',
+ 'TAS1 · INTERVALS':'TAS1 塔州 · 区间数','VIC1 · INTERVALS':'VIC1 维州 · 区间数',
+ 'TAS1 · RRP > 300':'TAS1 塔州 · 电价 > 300','VIC1 · RRP > 300':'VIC1 维州 · 电价 > 300',
+ 'TAS1':'TAS1 塔州','VIC1':'VIC1 维州',
+ 'Hourly charts use only the selected period. Full-year mode pools 365 days; month mode uses only that month. The frequency denominator is the observations in that hour within the selected period. Hour starting uses NEM AEST (UTC+10), without daylight saving. Interval endings are shifted back five minutes before assigning month or hour. Regional demand is not a retailer’s customer load.':'小时图仅使用所选期间的数据。全年模式汇总365天，月份模式仅统计该月。占比的分母是所选期间该小时的记录数。小时按 NEM 市场时间 AEST（UTC+10，不使用夏令时）划分。先将区间结束时间减五分钟，再归入月份或小时。区域需求不等于零售商客户负荷。',
+ 'Monthly CSV':'下载月度 CSV','Hourly CSV':'下载小时 CSV',
+ 'October 2026 detailed analysis':'2026年10月详细分析',
+ 'The cards, region controls and daily / intraday charts below cover October only.':'以下卡片、区域按钮及每日和日内图表仅统计2026年10月。',
+ 'MEAN INTERVAL PRICE':'平均区间电价','PEAK INTERVAL PRICE':'最高区间电价','MEAN DEMAND':'平均需求','PRICE VOLATILITY':'电价波动程度',
+ 'Mean interval price':'平均区间电价','Peak interval price':'最高区间电价','Mean demand':'平均需求','Price volatility':'电价波动程度',
+ 'AUD/MWh · equal interval weights':'澳元/兆瓦时 · 各区间等权',
+ 'AUD/MWh · five-minute maximum':'澳元/兆瓦时 · 五分钟最高值',
+ 'MW · regional demand':'兆瓦 · 区域需求',
+ 'Sample standard deviation · AUD/MWh':'样本标准差 · 澳元/兆瓦时',
+ 'Compare both shows each region separately in the cards; no combined regional price is calculated.':'选择两州对比时，卡片分别展示各州指标，不计算合并区域电价。',
+ 'Daily mean wholesale price':'每日平均批发电价',
+ 'Daily averages conceal five-minute spikes. Hover over points for values.':'日均值会掩盖五分钟价格尖峰。鼠标移到或点击圆点查看数值。',
+ 'Market observations':'市场观察','Monthly observations':'月度观察',
+ 'Calculated from aligned five-minute intervals':'根据时间对齐后的五分钟区间计算',
+ 'Mean TAS1 − VIC1 spread':'塔州减维州的平均价差',
+ 'Negative-price intervals':'负电价区间',
+ 'Complete paired coverage':'两州完整对齐覆盖',
+ 'Daily mean demand':'每日平均需求','MW · regional scale, not per-person consumption':'兆瓦 · 区域规模，不代表人均用电',
+ 'Daily price spread':'每日平均电价差',
+ 'TAS1 − VIC1 · AUD/MWh · above zero means TAS1 is more expensive':'塔州 − 维州 · 澳元/兆瓦时 · 大于零表示塔州更贵',
+ 'Intraday patterns':'日内规律',
+ 'October observations grouped by hour starting · NEM time (AEST, UTC+10), not local daylight saving time. Each hour contains 372 five-minute observations per region. These are historical distributions, not forecasts.':'十月记录按小时起点分组，使用 NEM 时间 AEST（UTC+10），不是当地夏令时。每州每小时组有372条五分钟记录。展示历史分布，不是预测。',
+ 'Mean wholesale price · AUD/MWh':'平均批发电价 · 澳元/兆瓦时',
+ 'Price dispersion · sample standard deviation, AUD/MWh':'价格分散程度 · 样本标准差，澳元/兆瓦时',
+ 'Dispersion across all observations in that hour during October; not consecutive price changes or a prediction interval.':'表示十月该小时所有价格的分散程度，不是相邻区间价格变化，也不是预测区间。',
+ 'Mean regional demand · MW':'平均区域需求 · 兆瓦',
+ 'Horizontal axis: hour starting, 00–23. For example, 12 means 12:00–13:00. Region buttons above also control these charts.':'横轴为小时起点（00—23），例如12表示12:00—13:00。上方十月区域按钮也控制这些图。',
+ 'Source and method':'数据来源与方法',
+ 'Source: user-uploaded':'来源：用户上传的',
+ 'AEMO aggregated price and demand CSVs':'AEMO 聚合电价与需求 CSV',
+ '. File provenance has not been independently checked against the latest online versions.':'。尚未独立核对这些上传文件与最新在线版本的差异。',
+ 'Download TAS1 CSV':'下载塔州 CSV','Download VIC1 CSV':'下载维州 CSV',
+ 'Interval-ending timestamps use the source NEM clock (AEST, UTC+10). For daily grouping, subtract five minutes before assigning a date. Negative prices are retained. Daily means use 288 observations. Spread is always TAS1 minus VIC1.':'时间戳为区间结束时间，沿用 NEM 时间 AEST（UTC+10）。日分组时先减五分钟再确定日期。保留负电价，每个完整日有288条记录。价差始终定义为塔州减维州。',
+ 'These descriptive results do not establish causes. Generation mix, network constraints, flows, weather and bidding require additional analysis. Historical wholesale prices do not predict future prices or household bills.':'这些描述性结果不能证明因果关系。发电结构、网络约束、潮流、天气和报价需要进一步分析。历史批发价不能直接预测未来价格或居民账单。',
+ 'NEM Pulse V0.2 · October 2026 historical dataset · No simulated fallback, live monitoring or forecasting. Website values are calculated from the linked CSV files when this page loads.':'NEM Pulse · 十月历史明细 · 没有模拟数据回退、实时监控或预测。页面加载时根据链接中的 CSV 计算数值。',
+ 'Loading CSV files…':'正在读取 CSV…','Loading…':'加载中…','Loading annual SQL summaries…':'正在读取全年 SQL 汇总…'
+ };
+ let lang='en';try{lang=localStorage.getItem('nem-language')||'en';}catch{}
+ if(!['en','zh'].includes(lang))lang='en';
+ const originals=new WeakMap();
+ function translate(s){
+  if(translations[s])return translations[s];
+  return s.replace(/Loaded: 24 monthly groups \+ annual and monthly hourly summaries · November 2025–October 2026/g,'已加载：24组月度统计及全年、各月小时统计 · 2025年11月—2026年10月')
+  .replace(/Loaded: October 2026 · 8,928 validated intervals per region · historical CSV data/g,'已加载：2026年10月 · 每州8,928条已验证区间 · 历史 CSV 数据')
+  .replace(/Hourly analysis · /g,'小时分析 · ')
+  .replace(/November 2025–October 2026/g,'2025年11月—2026年10月')
+  .replace(/Full year/g,'全年')
+  .replace(/(\d+) days · /g,'$1天 · ')
+  .replace(/(\d+) five-minute observations per hour per region\. High-price frequency is calculated within each hour of the selected period\. NEM AEST \(UTC\+10\); historical observations, not predictions\./g,'每州每小时$1条五分钟记录。高价频率在所选期间的每个小时内计算。使用 NEM AEST（UTC+10）；历史观察，不是预测。')
+  .replace(/8,928 five-minute intervals per region · 31 days\. Spread and observations always compare both regions\./g,'每州8,928个五分钟区间 · 31天。价差和市场观察始终比较两州。')
+  .replace(/AUD\/MWh\. TAS1 is higher in ([\d.]+)% of intervals\./g,'澳元/兆瓦时；塔州在 $1% 的区间更贵。')
+  .replace(/Hover over chart points for values\./g,'鼠标移到或点击图上的圆点查看数值。')
+  .replace(/TAS1:/g,'TAS1 塔州：').replace(/VIC1:/g,'VIC1 维州：')
+  .replace(/AUD\/MWh/g,'澳元/兆瓦时').replace(/\bMW\b/g,'兆瓦')
+  .replace(/Annual data unavailable:/g,'全年数据无法加载：')
+  .replace(/Data could not be loaded\./g,'无法加载数据。');
+ }
+ const host=document.createElement('div');host.style.cssText='display:flex;gap:6px;margin-left:12px;flex-wrap:wrap';host.id='languageControls';
+ for(const [value,label]of [['en','English'],['zh','中文']]){const b=document.createElement('button');b.textContent=label;b.type='button';b.dataset.language=value;b.onclick=()=>{lang=value;try{localStorage.setItem('nem-language',value);}catch{}apply();};host.append(b);}
+ document.querySelector('header').append(host);
+ const observer=new MutationObserver(apply);
+ function apply(){
+  observer.disconnect();
+  document.documentElement.lang=lang==='zh'?'zh-CN':'en';
+  const walk=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let node;
+  while(node=walk.nextNode()){
+   if(node.parentElement.closest('script,style,#languageControls'))continue;
+   const current=node.nodeValue;let saved=originals.get(node);
+   if(!saved||current!==saved.output){saved={english:current,output:current};}
+   const trim=saved.english.trim();const out=lang==='zh'?saved.english.replace(trim,translate(trim)):saved.english;
+   if(current!==out)node.nodeValue=out;saved.output=out;originals.set(node,saved);
+  }
+  document.querySelectorAll('[data-language]').forEach(b=>{b.classList.toggle('active',b.dataset.language===lang);b.setAttribute('aria-pressed',String(b.dataset.language===lang));});
+  observer.observe(document.body,{childList:true,subtree:true,characterData:true});
+ }
+ apply();
+})();
+
 </script></body></html>
+
