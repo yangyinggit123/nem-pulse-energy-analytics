@@ -1,0 +1,20 @@
+SELECT
+    region,
+    strftime(
+        '%H',
+        datetime(settlement_date, '-5 minutes')
+    ) AS hour,
+    COUNT(*) AS intervals,
+    ROUND(AVG(total_demand), 2) AS mean_demand_mw,
+    ROUND(AVG(rrp), 2) AS mean_price,
+    ROUND(MAX(rrp), 2) AS peak_price,
+    SUM(CASE WHEN rrp > 300 THEN 1 ELSE 0 END)
+        AS high_intervals,
+    ROUND(
+        100.0 * SUM(CASE WHEN rrp > 300 THEN 1 ELSE 0 END)
+        / COUNT(*),
+        2
+    ) AS high_pct
+FROM price_demand
+GROUP BY region, hour
+ORDER BY region, hour;

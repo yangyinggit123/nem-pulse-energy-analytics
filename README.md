@@ -1,168 +1,86 @@
-# NEM Pulse V0.2 — Tasmania vs Victoria
+# NEM Pulse — Electricity Price Analytics & Procurement Risk
 
-A beginner-friendly Python workflow for comparing wholesale electricity prices and regional demand in Tasmania (TAS1) and Victoria (VIC1), using uploaded AEMO CSV files for October 2026.
+An evolving portfolio project for electricity retailers, using Australian NEM data to explore wholesale price exposure and next-hour forecasting.
 
-**Website status:** The dashboard reads the uploaded October 2026 CSV files from `data/raw/` and calculates historical price, demand and spread metrics in the browser. It is not a live data feed. The uploaded files have not been independently compared with the latest official online versions.
+[Open the bilingual dashboard](https://yangyinggit123.github.io/nem-pulse-energy-analytics/prototype/)
 
-[Open the dashboard](https://yangyinggit123.github.io/nem-pulse-energy-analytics/prototype/)
+## Current progress
 
-Select **Tasmania**, **Victoria** or **Compare both** to explore the two regions. Summary cards use five-minute observations; charts show daily averages. The spread chart always shows TAS1 minus VIC1.
+- **V0.2 complete:** October CSV validation, descriptive statistics, daily and intraday charts.
+- **V0.3 SQL foundation complete:** 12 months of TAS1/VIC1 data, SQLite import, monthly and hourly risk summaries, interactive month and region filters, English/Chinese display and chart value tooltips.
+- **V0.4 in progress:** VIC1 next-hour price forecasting with persistence baselines, Ridge and gradient boosting trees.
+- **Planned:** Power BI, prediction intervals, retailer load and hedge scenarios, procurement-risk alerts and automated reports.
 
-## October 2026 results
+The public dashboard displays historical analysis. Forecast experiments are currently offline and are **not** integrated into the dashboard. No live feed, production forecasting service or real customer data is connected.
 
-| Metric | TAS1 | VIC1 |
-|---|---:|---:|
-| Mean wholesale price (AUD/MWh) | 61.59 | 52.94 |
-| Median wholesale price (AUD/MWh) | 88.14 | 55.52 |
-| Negative-price intervals | 18.66% | 26.97% |
-| Mean regional demand (MW) | 978.07 | 4,885.05 |
-| Peak interval demand (MW) | 1,281.83 | 7,367.24 |
+## Data and database
 
-The mean simultaneous price spread (TAS1 minus VIC1) was **+8.65 AUD/MWh**. TAS1 was more expensive in **57.35%** of intervals. These are descriptive observations, not evidence of what caused the price differences. Wholesale prices do not represent household electricity bills.
+Coverage: **November 2025–October 2026**, TAS1 and VIC1. There are **210,240 five-minute records**, 105,120 per region. The 24 files were downloaded from [AEMO](https://aemo.com.au/energy-systems/electricity/national-electricity-market-nem/data-nem/aggregated-data). Download URLs and file hashes are in `data/download_manifest.csv`; checks are in `data/quality_report.json`.
 
-![October 2026 daily prices, price spread and demand](reports/figures/tas_vs_vic_oct2026.png)
+Raw inputs are retained locally. Use `scripts/download_data.py` to obtain all 24 official files; this repository also retains the original October inputs. Official data can be revised: the downloader stops on hash differences instead of silently accepting a changed version. AEMO data remains subject to its applicable terms; this repository does not grant a separate data licence.
 
-## Project structure
+Database structure:
 
-The repository separates raw inputs, reproducible Python analysis, derived results and the browser dashboard:
+| Table | Grain | Rows |
+|---|---|---:|
+| `price_demand` | Region + five-minute interval ending | 210,240 |
+| `monthly_summary` | Region + month | 24 |
+| `hourly_risk_summary` | Region + hour of day across the year | 48 |
 
-```text
-nem-pulse-energy-analytics/
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── scripts/
-│   └── process_data.py
-├── data/
-│   ├── raw/
-│   │   ├── PRICE_AND_DEMAND_202610_TAS1.csv
-│   │   └── PRICE_AND_DEMAND_202610_VIC1.csv
-│   └── processed/
-│       ├── price_demand_clean.csv
-│       ├── tas_vic_aligned.csv
-│       ├── daily_summary.csv
-│       ├── monthly_summary.csv
-│       └── quality_report.json
-├── reports/
-│   ├── analysis_zh.md
-│   └── figures/tas_vs_vic_oct2026.png
-└── prototype/
-    ├── index.html  # Historical dashboard
-    └── app.js      # CSV loading, validation, metrics and charts
-```
+The two summary tables are snapshots derived from the detail table, not foreign-key-linked dimensions. Regenerate summaries after changing inputs. `sql/monthly_hourly_risk_summary.sql` supplies month-specific hourly dashboard data.
 
-`analysis_zh.md` contains the detailed analysis in Chinese. This README provides an English project overview and setup guide.
+Timestamps follow NEM AEST (UTC+10), without daylight saving. Subtract five minutes from interval endings before assigning a month, day or hour. Prices are AUD/MWh; demand is MW. Negative prices and spikes are retained. A high-price interval means RRP **greater than 300 AUD/MWh**, an illustrative threshold rather than an official risk standard.
 
-## Step 1: Set up Python
+## Forecast experiments
 
-Install Python 3.10 or later. Open the project folder in VS Code, then open a terminal. Run the commands from the folder containing this README.
+Target: **next-hour average VIC1 wholesale price**, using the latest completed hourly observations. Training covers November 2025–August 2026 (7,272 usable hours after lag construction); validation covers September 2026 (720 hours). October is reserved for final testing and has not been evaluated for model selection. Historical October descriptive analysis does not form part of the forecast evaluation.
 
-### macOS / Linux
+| Method | September validation MAE (AUD/MWh) |
+|---|---:|
+| Previous-hour persistence | 11.36 |
+| Previous-day same-hour persistence | 40.58 |
+| Ridge regression | 17.33 |
+| Histogram gradient boosting trees | 9.88 |
+
+The nonlinear model reduced validation MAE by **12.98%** relative to previous-hour persistence. This is a reduction in error, not an accuracy percentage or a demonstrated cost saving. It is one month's validation result, not proof of future or cross-season performance. No systematic parameter search has been performed.
+
+All trained models use the same lagged price/demand and calendar features. No future actual demand is supplied. These are rolling one-hour forecasts with observed past hours becoming available over time, not a single month-ahead forecast. The experiment assumes each completed hour's observations are available at the prediction time; operational publication delays and data revisions are not yet simulated. Forecast error is assessed on hourly average prices and can conceal five-minute price spikes.
+
+![Nonlinear model versus persistence](reports/figures/vic_nonlinear_comparison.png)
+
+![Ridge versus persistence](reports/figures/vic_forecast_comparison.png)
+
+## Reproduce locally
+
+Python 3.10 or later. On macOS/Linux, run from the repository root:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+python scripts/download_data.py
+python scripts/create_database.py
+python scripts/import_data.py
+sqlite3 data/nem_pulse.db < sql/create_summary_tables.sql
+python scripts/prepare_hourly.py
+python scripts/baseline_forecast.py
+python scripts/train_price_model.py
+python scripts/train_nonlinear_model.py
+python scripts/plot_forecast.py
 ```
 
-### Windows PowerShell
+`create_summary_tables.sql` creates the two materialized summary tables once; do not rerun against existing tables without reviewing how they will be refreshed. Input validation stops if the import file count or final record count is unexpected. The import script updates existing region/time keys, so repeated input imports do not duplicate rows. It does not automatically remove stale source records.
 
-```powershell
-py -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
-
-If PowerShell blocks activation, use the environment's Python directly:
-
-```powershell
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe scripts/process_data.py
-```
-
-## Step 2: Run the analysis
-
-With the virtual environment activated:
+Saved SQL queries can be rerun independently:
 
 ```bash
-python scripts/process_data.py
+sqlite3 -header -csv data/nem_pulse.db < sql/monthly_summary.sql > data/processed/annual_monthly_summary.csv
+sqlite3 -header -csv data/nem_pulse.db < sql/hourly_risk_summary.sql > data/processed/annual_hourly_risk_summary.csv
+sqlite3 -header -csv data/nem_pulse.db < sql/monthly_hourly_risk_summary.sql > data/processed/monthly_hourly_risk_summary.csv
 ```
 
-The script prints summary statistics and creates or overwrites derived files in `data/processed/` and `reports/figures/`. It preserves the original CSV files. Open the PNG to view the results; running the website is not required.
+Forecast output CSVs are in `data/processed/`. Database binaries, virtual environments and backups are intentionally excluded. The original `scripts/process_data.py` remains an October-only workflow; it is separate from the annual SQL summaries.
 
-## Input data and actual columns
+## Interpretation limits
 
-The input files are the two user-uploaded AEMO CSV attachments, preserved in `data/raw/`. They were not downloaded again or compared row by row with the latest online versions.
-
-Source: [AEMO Aggregated price and demand data](https://aemo.com.au/energy-systems/electricity/national-electricity-market-nem/data-nem/aggregated-data).
-
-| Column | Meaning and handling |
-|---|---|
-| `REGION` | TAS1 or VIC1; checked against the expected file region |
-| `SETTLEMENTDATE` | Interval-ending timestamp; strictly parsed and sorted |
-| `TOTALDEMAND` | Regional demand in MW; not household consumption or energy in MWh |
-| `RRP` | Regional Reference Price in AUD/MWh; negative prices are retained |
-| `PERIODTYPE` | All supplied records are TRADE; other values trigger an error for review |
-
-Each file contains **8,928 records**, covering interval endings from **2026-10-01 00:05** through **2026-11-01 00:00**, inclusive. Both files have complete five-minute coverage, with no missing values or duplicate timestamp keys, and align exactly.
-
-Input SHA-256 hashes are stored in `quality_report.json` for reproducibility.
-
-## Processing and calculation methods
-
-- Validate column names, numeric values, region identifiers, period types and timestamp keys.
-- Preserve negative prices and extreme values. Do not fill missing intervals with zero or interpolate them.
-- Save a cleaned long-format table, then join the two regions by timestamp using an outer join.
-- Define the price spread consistently as **TAS1 RRP − VIC1 RRP**.
-- Calculate mean prices using equal weight for each available five-minute interval.
-- Calculate demand-weighted price separately as `sum(RRP × TOTALDEMAND) / sum(TOTALDEMAND)`. This is a descriptive measure, not a household tariff or contracted purchasing cost.
-- Group daily results using the interval-ending timestamp minus five minutes, so an interval ending at midnight belongs to the preceding day. A complete day contains 288 intervals; `tas_n` and `vic_n` report the observed counts.
-
-Timestamps retain the source clock and are interpreted as NEM market time: AEST (UTC+10), without daylight saving adjustments. They are not converted to the computer's local timezone. See [AEMO's NEM time explanation](https://www.aemo.com.au/Electricity/National-Electricity-Market-NEM/~/-/media/F1314EB879E544708E29A5C04CF0111E.ashx).
-
-The script stops on invalid formats, duplicate keys, unexpected regions or period types, and timestamps outside the expected month. Missing intervals are recorded in the quality report. If inputs are incomplete, averages describe available observations and must not be presented as complete-month results.
-
-**To analyze another month, update both the input filenames and the `expected` date range in the script.**
-
-## Output files
-
-| File | Purpose |
-|---|---|
-| `price_demand_clean.csv` | Cleaned records for both regions in long format |
-| `tas_vic_aligned.csv` | One row per timestamp, with both regions and their price spread |
-| `daily_summary.csv` | Daily mean prices, spread and demand, plus interval counts |
-| `monthly_summary.csv` | Monthly price and demand statistics for each region |
-| `quality_report.json` | Coverage checks, alignment counts, input hashes and spread statistics |
-| `tas_vs_vic_oct2026.png` | Daily price, spread and demand comparison |
-
-The chart shows daily averages, which conceal five-minute price spikes. Use the interval-level CSV files to inspect extremes.
-
-## Limitations
-
-Price and demand alone cannot establish whether price differences were caused by generation mix, hydrology, interconnector constraints, outages, weather or bidding behaviour. Further analysis requires additional data and a suitable research design. Correlation is not causation.
-
-A single month's results should not be generalized to annual prices, future prices or household electricity bills. Regional demand levels also reflect differences in regional scale; they do not establish per-person consumption or efficiency.
-
-Running the script regenerates the CSV files and chart, but does not update written statistics in this README or `reports/analysis_zh.md`. Recheck the written results whenever inputs change. The verified runtime versions are recorded in that report.
-
-## What this version demonstrates
-
-- A reproducible Python workflow for cleaning, validating and aligning regional time series.
-- Descriptive analysis of prices, negative-price intervals, demand and regional spreads.
-- A static dashboard that loads the historical CSV files and calculates metrics in the browser.
-- Clear distinctions between historical and live data, wholesale and retail prices, and descriptive findings and causal explanations.
-
-## Dashboard setup
-
-The dashboard requires `prototype/index.html`, `prototype/app.js` and the two CSV files under `data/raw/`. Publish the repository root through GitHub Pages and open `/prototype/`. Opening the HTML directly from disk may prevent CSV loading because of browser security restrictions.
-
-The page displays a loading error if input files are unavailable or fail validation; it does not fall back to simulated data. The Python workflow separately produces the processed CSVs and PNG chart. The dashboard reads raw CSVs, not the processed files.
-
-## Next steps
-
-1. Run the Python workflow locally and reproduce the supplied outputs.
-2. Add a configurable month and date-range selection, with matching coverage checks.
-3. Extend the analysis to additional months before discussing longer-term patterns.
-4. Add generation, interconnector and weather data for further research into price differences.
-
-Automated downloads, live monitoring and forecasting are not implemented in this version.
+Regional demand is not a retailer's customer portfolio load. Earlier procurement examples assumed a constant **10 MW**, fully spot-exposed portfolio; they are simulations, not real retailer costs or losses. Actual procurement analysis needs customer interval loads, contract and hedge terms, losses and other applicable charges. Observed correlations and seasonal patterns do not establish causes. Risk alerts and procurement decisions require more validation than aggregate MAE alone.

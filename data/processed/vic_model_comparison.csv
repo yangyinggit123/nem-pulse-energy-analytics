@@ -1,0 +1,4 @@
+model,validation_mae
+Previous-hour baseline,11.358594907407408
+Ridge,17.32528719956859
+Gradient boosting trees,9.883980934936554
