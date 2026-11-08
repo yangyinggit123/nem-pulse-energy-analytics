@@ -1,0 +1,37 @@
+{
+  "training": "2026-08",
+  "development": "2026-09",
+  "regions": [
+    "TAS1",
+    "VIC1"
+  ],
+  "parameters": {
+    "learning_rate": 0.05,
+    "max_iter": 100,
+    "max_leaf_nodes": 15,
+    "min_samples_leaf": 30,
+    "early_stopping": false,
+    "random_state": 42
+  },
+  "historical_features": [
+    "price_lag_1",
+    "price_lag_24",
+    "demand_lag_1",
+    "hour_sin",
+    "hour_cos",
+    "weekday_sin",
+    "weekday_cos"
+  ],
+  "added_features": [
+    "aemo_hour_price",
+    "aemo_total_demand_two_period_mean",
+    "aemo_available_generation_two_period_mean",
+    "aemo_available_load_two_period_mean",
+    "aemo_net_interchange_two_period_mean",
+    "aemo_ss_solar_uigf_two_period_mean",
+    "aemo_ss_wind_uigf_two_period_mean"
+  ],
+  "independent_test": false,
+  "availability": "report generation time proxy; publication unverified",
+  "forecast": "rolling next-hour mean; prior-hour actuals assumed available at origin"
+}
