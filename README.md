@@ -12,7 +12,7 @@ Both pages support English and Chinese. The site presents historical observation
 |---|---|---|
 | V0.2 — Historical analysis | Completed | CSV validation, descriptive statistics, daily and intraday charts |
 | V0.3 — SQL and visualisation | SQL and web dashboard completed; Power BI pending | Twelve months of TAS1/VIC1 data, SQLite, monthly/hourly summaries and interactive filters |
-| V0.4 — Forecasting | In development | Persistence baselines, Ridge, gradient boosting, an initial prediction-interval experiment and AEMO predispatch features |
+| V0.4 — Forecasting | In development | Persistence baselines, Ridge, gradient boosting, an initial prediction-interval experiment, full-year AEMO predispatch features and expanding-history backtests |
 | V0.5 — Procurement-risk alerts | Planned | Simulated retailer customer loads, unhedged exposure, high-price alerts and cost scenarios |
 | V1.0 — Automated reporting | Planned | Data refresh, quality checks, charts and market reports |
 
@@ -41,44 +41,51 @@ The SQLite database is stored locally at `data/nem_pulse.db`. The website reads 
 | `monthly_summary` | Region + month | 24 |
 | `hourly_risk_summary` | Region + hour of day across the year | 48 |
 | `predispatch_region_forecast` | Region + forecast vintage + target interval | Multiple versions retained |
-| `predispatch_hourly_features` | Region + hourly forecast origin, August–September 2026 | 2,928 |
+| `predispatch_hourly_features` | Region + hourly forecast origin, November 2025–October 2026 | 17,520 |
+| `predispatch_hourly_model_input` (view) | Report age ≤60 minutes; previous-hour observations present | 17,514 |
 
 Summary tables are derived snapshots, not foreign-key-linked dimensions. Refresh them when inputs change. The database, virtual environment and large raw forecast archives are kept locally. Publishing a database file to GitHub would provide a download, not an online database service.
 
-## AEMO predispatch expansion
+## Full-year AEMO predispatch features
 
-The local expansion covers **1 August–30 September 2026 (61 days)**:
+Coverage now matches the historical dataset: **1 November 2025–31 October 2026 (365 days)**, with **8,760 hourly origins per region** and **17,520 hourly feature rows**. A total of 35,040 selected half-hour rows was extracted from 53 official weekly archives, including the lead-in report.
 
-- 1,464 hourly origins per region, 2,928 hourly feature rows in total.
-- 5,856 selected half-hour forecast-version rows, drawn from ten weekly archives including the lead-in period.
-- Inputs include predispatch price, regional demand, available generation/load, net interchange, and semi-scheduled wind/solar forecasts.
+Inputs include predispatch price, regional demand, available generation/load, net interchange, and semi-scheduled wind/solar forecasts. Source: [AEMO predispatch reports](https://www.aemo.com.au/energy-systems/electricity/national-electricity-market-nem/data-nem/market-management-system-mms-data/pre-dispatch).
 
-Source: [AEMO predispatch reports](https://www.aemo.com.au/energy-systems/electricity/national-electricity-market-nem/data-nem/market-management-system-mms-data/pre-dispatch).
+For each origin, select the latest report generated no later than that origin and covering the next two half-hour periods. Average their prices to construct an hourly reference. This is our aggregation, not a separately published AEMO hourly forecast.
 
-For each hourly origin, we select a report generated no later than that origin and covering the next two half-hour periods. Their forecast prices are averaged to construct an hourly reference; this is our aggregation, not a separately published AEMO hourly forecast.
+Quality checks preserve all original records. Both regions' first hourly row lacks previous-hour observations. At 19:00 and 20:00 AEST on 10 March 2026, the latest available archived report was approximately 117 and 177 minutes old. The default model-input view excludes these four regional rows and the two first-hour rows; 60 minutes is a project threshold, not an AEMO standard. Model lag-24 construction additionally excludes the initial 24 hours per region.
 
-**Availability limitation:** report generation time is a proxy. Actual publication/delivery time has not been verified. The target-hour actual price is used only as a label, never as a predictor. Prior-hour actual observations are assumed available at the forecast origin.
+**Availability limitation:** report generation time is a proxy for publication availability, not a verified receipt timestamp. Completed-hour actual observations are assumed available at each origin. Actual target prices are labels only, never predictors.
 
-## Latest forecast comparison
+[Annual quality checks](reports/predispatch_year_quality.json) · [Archive manifest and SHA-256 hashes](data/predispatch_year_download_manifest.json)
 
-Target: the next hour's average wholesale price, evaluated as rolling one-hour forecasts.
+## Latest forecasts: expanding historical training
 
-For a controlled comparison, both tree models use **August 2026 for training (744 hours per region)** and **September for development evaluation (720 hours per region)**, with the same fixed model parameters.
+The forecasting page now supports **region, evaluation month (August/September/October), chart date range, language and point-value tooltips**.
 
-| Method | TAS1 MAE | VIC1 MAE |
-|---|---:|---:|
-| Previous-hour persistence | 11.75 | 11.36 |
-| AEMO predispatch reference | 12.65 | **9.82** |
-| History-only gradient boosting | 11.60 | 12.44 |
-| Gradient boosting with AEMO features | **11.19** | 10.19 |
+Models are refitted once before each evaluation month, using only earlier eligible hours from November 2025 onward, then held fixed within the month. Both trees use identical training targets and the previously fixed parameters. No new parameter search was performed.
 
-MAE is measured in AUD/MWh; lower is better. Added features reduced MAE relative to the same-period history-only tree by approximately **3.5% in TAS1** and **18.1% in VIC1**. AEMO's reference still had the lowest VIC1 MAE.
+The entire twelve months are **not** used to train a model and then score that same year. The October model trains through September; no production model has been fitted through October.
 
-September has already been used for development, and October has also been evaluated separately. Neither is now an untouched independent test. These results do not establish future performance, causal effects, or procurement savings.
+| Region | Evaluation month | Training hours | Baseline MAE | AEMO MAE | History tree MAE | Tree + AEMO MAE |
+|---|---|---:|---:|---:|---:|---:|
+| TAS1 | 2026-08 | 6,526 | 11.12 | **10.33** | 12.81 | 11.62 |
+| TAS1 | 2026-09 | 7,270 | **11.75** | 12.65 | 12.86 | 13.31 |
+| TAS1 | 2026-10 | 7,990 | **11.77** | 15.00 | 14.66 | 13.46 |
+| VIC1 | 2026-08 | 6,526 | 12.12 | 10.06 | 11.04 | **9.57** |
+| VIC1 | 2026-09 | 7,270 | 11.36 | 9.82 | 9.88 | **8.17** |
+| VIC1 | 2026-10 | 7,990 | 13.88 | 13.51 | 13.69 | **11.16** |
 
-![Predispatch feature comparison — development evaluation](reports/figures/augmented_forecast_development.png)
+MAE is in AUD/MWh; lower is better. Evaluation counts are 744 hours in August, 720 in September and 744 in October, per region. More history and features did not improve every region or month. The added-feature tree improved VIC1 results, while TAS1 persistence remained better in September and October.
 
-[Hourly predictions](data/processed/augmented_forecast_development_predictions.csv) · [Full metrics](data/processed/augmented_forecast_development_metrics.csv) · [Experiment protocol](reports/augmented_forecast_protocol.json) · [Comparison script](scripts/compare_augmented_forecasts.py)
+**This is retrospective development evaluation, not a fresh independent test.** These periods have already been examined. No future-accuracy or procurement-savings claim is made.
+
+Only one evaluation hour had actual hourly mean price above 300 AUD/MWh (VIC1, October). Its absolute errors were approximately 116.55 for the augmented tree, 91.27 for persistence and 34.26 for the AEMO reference. A better overall MAE does not establish better high-price risk detection, and hourly averaging can conceal five-minute spikes. Earlier prediction intervals have not been recalibrated for these refitted models.
+
+![Expanded-history October diagnostic](reports/figures/year_forecast_october.png)
+
+[Predictions](data/processed/year_forecast_predictions.csv) · [Full metrics](data/processed/year_forecast_metrics.csv) · [Protocol](reports/year_forecast_protocol.json) · [Report](reports/year_forecast_report.md) · [Training script](scripts/train_year_forecasts.py)
 
 ### Earlier experiments
 
@@ -93,7 +100,7 @@ The earlier VIC1 experiment trained on November 2025–August 2026 (7,272 usable
 
 The latest history-only tree was retrained on August alone to match the shorter predispatch dataset. Its result is not the same model as the earlier 9.88 result.
 
-A separate October evaluation produced MAE of approximately 13.88 for persistence and 13.65 for the longer-history tree. An initial fixed-width prediction-interval experiment was also completed locally. These later local experiments are not all reproduced in the public website or repository yet.
+A separate October evaluation produced MAE of approximately 13.88 for persistence and 13.65 for the longer-history tree. An initial fixed-width prediction-interval experiment was also completed locally. Its interval results are separate from the latest point forecasts and have not been recalibrated for the latest models.
 
 ## Repository structure
 
@@ -138,10 +145,21 @@ python scripts/plot_forecast.py
 
 The summary-table creation script is intended for initial setup; review the refresh process before rerunning it against existing tables. Repeated raw imports update region/time keys instead of duplicating rows, but do not automatically remove stale records. The original `scripts/process_data.py` remains an October-only workflow.
 
-For the latest predispatch experiment, the comparison script requires the populated local `predispatch_hourly_features` table. `scripts/prepare_predispatch_features.py` additionally requires the ten local weekly archives and an existing `predispatch_region_forecast` table. The full archive-download/schema setup is not yet packaged as a clean-clone workflow; published prediction CSVs can be inspected without it.
+To reproduce the full-year predispatch extension after the historical import:
+
+```bash
+python scripts/download_predispatch_year.py
+python scripts/build_predispatch_year.py
+python scripts/train_year_forecasts.py
+```
+
+The checked-in download plan lists 53 official weekly archives (roughly 15 GB of raw ZIPs). Existing size-validated ZIPs are reused and hashed; monthly build checkpoints allow resuming. All original archives and the SQLite database remain local. Inspect the published result CSVs without downloading the archives if you only want to review the analysis.
+
+`prepare_predispatch_year_month.py` builds a selected month and creates the regional forecast table if missing. `build_predispatch_year.py` validates the year, exports `predispatch_year_features.csv` and creates the default model-input view. The earlier `prepare_predispatch_features.py` and `compare_augmented_forecasts.py` retain the August-only training experiment; their results are distinct from the expanded-history run.
 
 ## Procurement-risk scope
 
 The intended user is an energy retailer assessing wholesale purchase exposure. V0.5 will combine price scenarios with a simulated customer portfolio and explicit hedge assumptions.
 
 Earlier constant **10 MW**, fully spot-exposed examples are simulations, not observed retailer costs or losses. Real procurement analysis also needs customer interval loads, contract/hedge terms, losses and applicable charges. Hourly average prices can conceal five-minute spikes. A lower average forecast error alone does not demonstrate an effective risk alert or profitable procurement decision.
+

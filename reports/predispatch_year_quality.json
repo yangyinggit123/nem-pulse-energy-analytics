@@ -1,0 +1,55 @@
+{
+  "start": "2025-11-01 00:00:00",
+  "end_exclusive": "2026-11-01 00:00:00",
+  "days": 365,
+  "hourly_rows": 17520,
+  "rows_per_region": {
+    "TAS1": 8760,
+    "VIC1": 8760
+  },
+  "selected_halfhour_rows": 35040,
+  "null_features": {
+    "region": 0,
+    "forecast_origin": 0,
+    "target_hour_start": 0,
+    "target_hour_end": 0,
+    "report_generated_at": 0,
+    "forecast_age_minutes": 0,
+    "predispatchseqno": 0,
+    "target_halfhour_periods": 0,
+    "aemo_hour_price": 0,
+    "source_archive": 0,
+    "source_report": 0,
+    "availability_basis": 0,
+    "aemo_total_demand_two_period_mean": 0,
+    "aemo_available_generation_two_period_mean": 0,
+    "aemo_available_load_two_period_mean": 0,
+    "aemo_net_interchange_two_period_mean": 0,
+    "aemo_ss_solar_uigf_two_period_mean": 0,
+    "aemo_ss_wind_uigf_two_period_mean": 0,
+    "actual_hour_mean_label": 0,
+    "previous_hour_price": 2,
+    "previous_hour_demand_mw": 2
+  },
+  "missing_previous_hour_explanation": "The first historical hour has no preceding observations; both lag columns are NULL for each region. Do not fill with future data.",
+  "max_report_age_minutes": 177.33333333333334,
+  "stale_report_issues": [
+    {
+      "origin": "2026-03-10 19:00:00",
+      "issue": "report age over 60 minutes",
+      "age_minutes": 117.33333333333333
+    },
+    {
+      "origin": "2026-03-10 20:00:00",
+      "issue": "report age over 60 minutes",
+      "age_minutes": 177.33333333333334
+    }
+  ],
+  "actual_rows_preserved": 210240,
+  "report_generated_time_only_proxy": true,
+  "model_retrained": false,
+  "validated_at_utc": "2026-11-09T12:27:49.574715+00:00",
+  "default_model_input_rows": 17514,
+  "default_model_input_view": "predispatch_hourly_model_input",
+  "default_model_input_rule": "Exclude report age >60 minutes and first-hour missing historical lags; threshold is a project convention, not an AEMO standard."
+}
