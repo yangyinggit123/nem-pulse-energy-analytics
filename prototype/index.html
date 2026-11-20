@@ -149,6 +149,47 @@ svg.chart circle{cursor:crosshair}
  apply();
 })();
 
-</script></body></html>
+</script><script>
+(() => {
+  const url = new URL(window.location.href);
+  const choice = url.searchParams.get('analytics');
+  const key = 'nem-pulse-analytics-disabled';
+  const requestedChange = choice === 'off' || choice === 'on';
+  let disabled = choice === 'off';
+  let saved = false;
+
+  try {
+    if (choice === 'off') localStorage.setItem(key, '1');
+    if (choice === 'on') localStorage.removeItem(key);
+    disabled = localStorage.getItem(key) === '1';
+    saved = true;
+  } catch {
+    // An explicit opt-out still applies to this load if storage is blocked.
+  }
+
+  if (requestedChange) {
+    if (saved) {
+      url.searchParams.delete('analytics');
+      history.replaceState(history.state, '', url);
+    }
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    status.style.cssText = 'position:fixed;bottom:12px;right:12px;margin:0;max-width:calc(100% - 24px);padding:10px 14px;background:#162334;color:#fff;border:1px solid #527083;border-radius:8px;z-index:999';
+    status.textContent = saved
+      ? (disabled ? '此浏览器已退出访问统计 · Analytics off' : '此浏览器已恢复访问统计 · Analytics on')
+      : (disabled ? '本次打开已退出统计，浏览器未保存设置' : '浏览器未保存统计设置');
+    document.body.append(status);
+  }
+
+  if (!disabled) {
+    const beacon = document.createElement('script');
+    beacon.type = 'module';
+    beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    beacon.setAttribute('data-cf-beacon', "{\"token\":\"216b4860846c40ab9cfa4a51fbd67996\",\"spa\":false}");
+    document.body.append(beacon);
+  }
+})();
+</script>
+</body></html>
 
 
